@@ -1,50 +1,48 @@
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  background: #f5f5f5;
+/* Colors for summary boxes */
+.balance { background: #4CAF50; color: white; }
+.deposited { background: #FFC107; }
+.returns { background: #2196F3; color: white; }
+.next { background: #9E9E9E; color: white; }
+
+/* Welcome banner */
+.welcome {
+  text-align: center;
+  padding: 20px;
+  background: #f0f0f0;
+  margin: 10px;
+  border-radius: 5px;
 }
 
-header {
+/* Calculator styling */
+.calculator {
+  margin: 20px;
+  padding: 15px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+.calculator input, .calculator select {
+  margin: 10px 0;
+  padding: 8px;
+}
+.calculator button {
   background: darkgreen;
   color: white;
-  padding: 15px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 10px 15px;
+  border: none;
+  cursor: pointer;
 }
 
-nav a {
-  color: white;
-  margin: 0 10px;
-  text-decoration: none;
-}
-
-.summary {
+/* Bottom panels */
+.bottom-panels {
   display: flex;
   justify-content: space-around;
   margin: 20px;
 }
-
-.box {
-  background: #e0e0e0;
-  padding: 15px;
-  border-radius: 5px;
-  text-align: center;
+.bottom-panels div {
   flex: 1;
-  margin: 5px;
-}
-
-.transactions {
-  margin: 20px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  border: 1px solid #ccc;
-  padding: 10px;
-  text-align: center;
+  margin: 10px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 5px;
 }
