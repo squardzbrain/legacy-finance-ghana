@@ -2,12 +2,14 @@
 // - Calculator logic
 // - Signup modal UX
 // - Signup form POST via fetch to /api/signup (credentials included for HTTP-only session cookie)
+//
 // Server responsibilities (backend):
-//  - Validate phone (required) and optional email
-//  - Hash password and store securely
-//  - Create participant record and set an HTTP-only session cookie
+//  - Validate name (required), phone (required) and password (required, min 8 chars)
+//  - Hash password and store securely (bcrypt/argon2)
+//  - Create participant record and set an HTTP-only, Secure, SameSite cookie
 //  - Return JSON { success: true, redirect: "/participant.html" } on success
 //  - Return JSON { success: false, error: "message" } on validation/auth failure
+//  - Respond to CORS preflight (OPTIONS) if frontend and API are on different origins
 
 document.addEventListener('DOMContentLoaded', () => {
   // Calculator buttons
@@ -106,8 +108,8 @@ function initSignup() {
     e.preventDefault();
     modal.hidden = false;
     trapFocus(modal);
-    const phone = document.getElementById('phone');
-    if (phone) phone.focus();
+    const name = document.getElementById('fullName') || document.getElementById('phone');
+    if (name) name.focus();
   });
 
   // Close handlers
@@ -122,12 +124,17 @@ function initSignup() {
     e.preventDefault();
     clearSignupError();
 
+    const fullName = (document.getElementById('fullName') || {}).value || '';
     const phone = (document.getElementById('phone') || {}).value || '';
-    const email = (document.getElementById('email') || {}).value || '';
     const password = (document.getElementById('password') || {}).value || '';
     const redirect = (signupForm.querySelector('input[name="redirect"]') || {}).value || '/participant.html';
 
     // Basic client-side validation (server must re-validate)
+    if (!fullName || fullName.trim().length < 2) {
+      showSignupError('Please enter your full name.');
+      document.getElementById('fullName').focus();
+      return;
+    }
     if (!phone || phone.trim().length < 7) {
       showSignupError('Please enter a valid phone number.');
       document.getElementById('phone').focus();
@@ -140,7 +147,7 @@ function initSignup() {
     }
 
     // Prepare payload
-    const payload = { phone: phone.trim(), email: email.trim() || null, password };
+    const payload = { name: fullName.trim(), phone: phone.trim(), password };
 
     // POST to server. Use credentials: 'include' so server can set HTTP-only cookies.
     try {
@@ -221,6 +228,7 @@ let previousActive = null;
 function trapFocus(modal) {
   previousActive = document.activeElement;
   const focusable = modal.querySelectorAll('a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (!focusable || focusable.length === 0) return;
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
 
