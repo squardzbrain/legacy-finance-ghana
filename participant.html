@@ -1,1 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Participant Dashboard — Legacy Finance Ghana</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="participant.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <img src="assets/logo.png" alt="Legacy Finance Ghana logo" class="logo">
+      <div class="brand-text">
+        <h1>Participant Dashboard</h1>
+        <div class="tagline">Legacy Finance Ghana — Participant Portal</div>
+      </div>
+    </div>
 
+    <nav class="main-nav" aria-label="Participant navigation">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="#" id="accountLink" class="nav-link">Account</a>
+      <a href="#" id="transactionsLink" class="nav-link">Transactions</a>
+      <button id="logoutBtn" class="btn-secondary">Logout</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section id="profileSection" class="welcome" aria-labelledby="profileHeading">
+      <h2 id="profileHeading">Welcome</h2>
+      <p class="lead" id="profileLead">Loading your account…</p>
+    </section>
+
+    <section class="main-grid" style="margin-top:12px;">
+      <div class="left-col">
+        <section id="accountSummary" class="card" aria-labelledby="summaryHeading">
+          <div class="card-title" id="summaryHeading">Account Summary</div>
+          <div style="margin-top:8px;">
+            <div class="card-value">Current Balance: GHC <span id="pCurrentBalance">—</span></div>
+            <div style="margin-top:6px;">Total Deposited: GHC <span id="pTotalDeposited">—</span></div>
+            <div style="margin-top:6px;">Returns Earned: GHC <span id="pReturnsEarned">—</span></div>
+          </div>
+        </section>
+
+        <section id="recentTransactions" class="table-wrap" aria-labelledby="txHeading" style="margin-top:12px;">
+          <h3 id="txHeading">Recent Transactions</h3>
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Type</th><th>Amount (GHC)</th><th>Status</th></tr>
+            </thead>
+            <tbody id="txBody">
+              <tr><td colspan="4" style="text-align:center;color:#666;padding:12px;">Loading transactions…</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <aside class="right-col">
+        <section id="actionsPanel" class="panel" aria-labelledby="actionsHeading">
+          <h4 id="actionsHeading">Quick Actions</h4>
+          <ul style="margin-top:8px;">
+            <li><a href="#" id="depositBtn">Make a Deposit</a></li>
+            <li><a href="#" id="withdrawBtn">Request Withdrawal</a></li>
+            <li><a href="#" id="profileBtn">Edit Profile</a></li>
+          </ul>
+        </section>
+
+        <section id="supportPanel" class="panel" style="margin-top:12px;">
+          <h4>Support</h4>
+          <p style="margin-top:8px;color:#555">Need help? Contact support at <a href="mailto:support@legacyfinance.gh">support@legacyfinance.gh</a>.</p>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <small>© Legacy Finance Ghana • Built for Ghanaians Future</small>
+  </footer>
+</body>
+</html>
