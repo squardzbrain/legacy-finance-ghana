@@ -1,0 +1,9 @@
+legacy-finance-ghana/
+├── index.html        (main dashboard page)
+├── style.css         (design and colors)
+├── script.js         (logic for transactions)
+├── assets/           (images, icons, logos)
+│   ├── logo.png
+│   └── icons/
+└── reports/          (monthly transparency reports)
+    └── July2026.md
