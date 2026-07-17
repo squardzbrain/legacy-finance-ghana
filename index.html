@@ -27,26 +27,26 @@
     </nav>
   </header>
 
-  <!-- Signup modal (production-ready form posts to /api/signup) -->
+  <!-- Signup modal (production-ready form posts to /api/signup via fetch) -->
   <!-- Server responsibilities: validate inputs, hash password, create participant record,
-       create secure HTTP-only session cookie, and respond with a redirect or JSON success.
+       create secure HTTP-only session cookie, and respond with JSON { success:true, redirect:"/participant.html" }.
        Do NOT store passwords client-side. -->
   <div id="signupModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="signupTitle" hidden>
     <div class="modal-content">
       <button id="closeSignup" class="modal-close" aria-label="Close signup">×</button>
       <h3 id="signupTitle">Create Participant Account</h3>
 
-      <!-- Production-ready form: posts to server endpoint /api/signup -->
-      <!-- phone is required; email is optional but supported -->
-      <form id="signupForm" action="/api/signup" method="POST">
-        <label for="phone">Phone (MoMo) <span aria-hidden="true">*</span></label>
-        <input id="phone" name="phone" type="tel" pattern="^\+?[0-9\s\-]{7,20}$" placeholder="+233..." required>
+      <!-- Updated signup form: collects Full name, Phone, Password -->
+      <!-- The client script intercepts submit and sends JSON to /api/signup (credentials: include) -->
+      <form id="signupForm" action="/api/signup" method="POST" novalidate>
+        <label for="fullName">Full name <span aria-hidden="true">*</span></label>
+        <input id="fullName" name="fullName" type="text" autocomplete="name" placeholder="Kwame Mensah" required>
 
-        <label for="email">Email (optional)</label>
-        <input id="email" name="email" type="email" placeholder="you@example.com" aria-describedby="emailHelp">
+        <label for="phone">Phone (MoMo) <span aria-hidden="true">*</span></label>
+        <input id="phone" name="phone" type="tel" pattern="^\+?[0-9\s\-]{7,20}$" placeholder="+233..." autocomplete="tel" required>
 
         <label for="password">Password <span aria-hidden="true">*</span></label>
-        <input id="password" name="password" type="password" minlength="8" required>
+        <input id="password" name="password" type="password" minlength="8" autocomplete="new-password" required>
 
         <!-- Optional: server can accept an optional redirect URL after signup -->
         <input type="hidden" name="redirect" value="/participant.html">
@@ -56,7 +56,7 @@
           <button id="signupCancel" class="btn-secondary" type="button">Cancel</button>
         </div>
 
-        <p class="muted" id="emailHelp">We will use your phone for verification. Email is optional for now.</p>
+        <p class="muted">We will use your phone for verification. Email is optional and not required for signup.</p>
       </form>
     </div>
   </div>
@@ -166,7 +166,7 @@
   </footer>
 
   <script>
-    // Minimal client-side UX for the signup modal (production: server handles form POST)
+    // Minimal client-side UX for the signup modal (production: script.js will intercept submit and POST JSON)
     (function () {
       const openBtn = document.getElementById('openSignup');
       const modal = document.getElementById('signupModal');
@@ -177,8 +177,8 @@
 
       openBtn.addEventListener('click', () => {
         modal.hidden = false;
-        const phone = document.getElementById('phone');
-        if (phone) phone.focus();
+        const name = document.getElementById('fullName');
+        if (name) name.focus();
       });
 
       closeBtn.addEventListener('click', () => modal.hidden = true);
@@ -189,9 +189,8 @@
         if (e.key === 'Escape' && !modal.hidden) modal.hidden = true;
       });
 
-      // Optional: progressive enhancement — if you prefer to submit via fetch,
-      // implement a handler here that POSTs to /api/signup and handles JSON response.
-      // For now the form uses a standard POST action so the server can set an HTTP-only session cookie.
+      // Note: the full signup logic (client-side validation, fetch POST to /api/signup,
+      // error handling, and redirect on success) is implemented in script.js.
     })();
   </script>
 </body>
