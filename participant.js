@@ -1,18 +1,33 @@
 // participant.js
-// Production-ready client logic for the participant dashboard.
+// Production-ready client logic for the participant dashboard (updated).
 // Assumes backend sets a secure HTTP-only session cookie after authentication.
 // Endpoints used:
 //  - GET  /api/profile         -> returns { name, phone, email, currentBalance, totalDeposited, returnsEarned }
 //  - GET  /api/transactions    -> returns [ { date, type, amount, status } ]
 //  - POST /api/logout          -> clears session
 // All requests use credentials: 'include' so cookies are sent/received by the browser.
+//
+// Improvements in this version:
+// - Robust fetch helper with timeout and optional retries for transient failures
+// - Clearer UI states (loading, empty, error) and a manual refresh action
+// - Defensive rendering to avoid runtime errors if server returns unexpected shapes
+// - Better logging and user-facing error messages
+// - Small accessibility improvements (focus management for refresh button)
 
 document.addEventListener('DOMContentLoaded', () => {
   attachUiHandlers();
+  // Allow user to manually refresh profile/transactions
+  const refreshBtn = createRefreshButton();
+  const profileSection = document.getElementById('profileSection');
+  if (profileSection && refreshBtn) profileSection.appendChild(refreshBtn);
+
   fetchAndRenderProfile();
   fetchAndRenderTransactions();
 });
 
+/* -------------------------
+   UI wiring
+   ------------------------- */
 function attachUiHandlers() {
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
@@ -30,16 +45,72 @@ function attachUiHandlers() {
 }
 
 /* -------------------------
-   Fetch profile and render
+   Fetch helpers
+   ------------------------- */
+/**
+ * Fetch with timeout and optional retries for transient errors.
+ * - url: string
+ * - options: fetch options
+ * - timeoutMs: number (default 8000)
+ * - retries: number (default 0)
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000, retries = 0) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const resp = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(id);
+      return resp;
+    } catch (err) {
+      clearTimeout(id);
+      // If aborted or network error and we have retries left, wait and retry
+      const isAbort = err.name === 'AbortError';
+      const isNetwork = err instanceof TypeError;
+      if (attempt < retries && (isAbort || isNetwork)) {
+        // Exponential backoff with jitter
+        const backoff = Math.min(1000 * Math.pow(2, attempt), 5000);
+        await new Promise(r => setTimeout(r, backoff + Math.random() * 200));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+/* -------------------------
+   Profile fetching and rendering
    ------------------------- */
 async function fetchAndRenderProfile() {
   setProfileLoading(true);
-  try {
-    const resp = await fetch('/api/profile', { credentials: 'include', headers: { 'Accept': 'application/json' } });
-    if (resp.status === 401) return redirectToHome(); // not authenticated
-    if (!resp.ok) throw new Error(`Profile request failed (${resp.status})`);
+  clearProfileError();
 
-    const profile = await resp.json();
+  try {
+    const resp = await fetchWithTimeout('/api/profile', {
+      credentials: 'include',
+      headers: { 'Accept': 'application/json' }
+    }, 8000, 1); // one retry for transient issues
+
+    if (resp.status === 401) return redirectToHome(); // not authenticated
+    if (resp.status === 403) {
+      showProfileError('Access denied. Please sign in again.');
+      return;
+    }
+    if (!resp.ok) {
+      // Try to parse error message if present
+      let errMsg = `Profile request failed (${resp.status})`;
+      try {
+        const body = await resp.json();
+        if (body && body.error) errMsg = body.error;
+      } catch (_) { /* ignore parse errors */ }
+      throw new Error(errMsg);
+    }
+
+    const profile = await safeJson(resp);
+    if (!profile || typeof profile !== 'object') {
+      throw new Error('Invalid profile data received from server.');
+    }
+
     renderProfile(profile);
   } catch (err) {
     console.error('Error loading profile', err);
@@ -52,10 +123,10 @@ async function fetchAndRenderProfile() {
 function renderProfile(profile) {
   const heading = document.getElementById('profileHeading');
   const lead = document.getElementById('profileLead');
-  if (heading) heading.textContent = `Welcome, ${profile.name || 'Participant'}`;
+  if (heading) heading.textContent = `Welcome, ${escapeText(profile.name) || 'Participant'}`;
   if (lead) {
-    const phone = profile.phone || '—';
-    const email = profile.email ? ` • ${profile.email}` : '';
+    const phone = profile.phone ? escapeText(profile.phone) : '—';
+    const email = profile.email ? ` • ${escapeText(profile.email)}` : '';
     lead.textContent = `Phone: ${phone}${email}`;
   }
 
@@ -75,8 +146,20 @@ function setProfileLoading(isLoading) {
   if (isLoading) lead.textContent = 'Loading your account…';
 }
 
+function showProfileError(msg) {
+  const lead = document.getElementById('profileLead');
+  if (lead) lead.textContent = msg;
+}
+
+function clearProfileError() {
+  const lead = document.getElementById('profileLead');
+  if (lead && lead.textContent && lead.textContent.startsWith('Unable to load')) {
+    lead.textContent = '';
+  }
+}
+
 /* -------------------------
-   Fetch transactions and render
+   Transactions fetching and rendering
    ------------------------- */
 async function fetchAndRenderTransactions() {
   const tbody = document.getElementById('txBody');
@@ -84,15 +167,20 @@ async function fetchAndRenderTransactions() {
   tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#666;padding:12px;">Loading transactions…</td></tr>`;
 
   try {
-    const resp = await fetch('/api/transactions', { credentials: 'include', headers: { 'Accept': 'application/json' } });
+    const resp = await fetchWithTimeout('/api/transactions', {
+      credentials: 'include',
+      headers: { 'Accept': 'application/json' }
+    }, 8000, 1);
+
     if (resp.status === 401) return redirectToHome();
     if (!resp.ok) throw new Error(`Transactions request failed (${resp.status})`);
 
-    const txs = await resp.json();
+    const txs = await safeJson(resp);
     renderTransactions(txs);
   } catch (err) {
     console.error('Error loading transactions', err);
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#b00020;padding:12px;">Error loading transactions.</td></tr>';
+    const tbody = document.getElementById('txBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#b00020;padding:12px;">Error loading transactions.</td></tr>';
   }
 }
 
@@ -106,25 +194,28 @@ function renderTransactions(txs) {
     return;
   }
 
-  txs.forEach(tx => {
+  // Render newest first if server returns chronological order
+  const list = Array.isArray(txs) ? txs.slice().reverse() : [];
+
+  list.forEach(tx => {
     const tr = document.createElement('tr');
 
     const dateCell = document.createElement('td');
-    dateCell.textContent = formatDate(tx.date);
+    dateCell.textContent = formatDate(tx && tx.date);
     tr.appendChild(dateCell);
 
     const typeCell = document.createElement('td');
-    typeCell.textContent = tx.type || '—';
+    typeCell.textContent = tx && tx.type ? tx.type : '—';
     tr.appendChild(typeCell);
 
     const amountCell = document.createElement('td');
-    amountCell.textContent = formatCurrency(tx.amount);
+    amountCell.textContent = formatCurrency(tx && tx.amount);
     tr.appendChild(amountCell);
 
     const statusCell = document.createElement('td');
     const span = document.createElement('span');
-    span.className = `badge ${statusClass(tx.status)}`;
-    span.textContent = tx.status || '—';
+    span.className = `badge ${statusClass(tx && tx.status)}`;
+    span.textContent = tx && tx.status ? tx.status : '—';
     statusCell.appendChild(span);
     tr.appendChild(statusCell);
 
@@ -138,7 +229,8 @@ function renderTransactions(txs) {
 async function handleLogout(e) {
   e && e.preventDefault();
   try {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+    // Attempt logout; server should clear session cookie
+    await fetchWithTimeout('/api/logout', { method: 'POST', credentials: 'include' }, 5000, 0);
   } catch (err) {
     console.error('Logout request failed', err);
   } finally {
@@ -148,7 +240,7 @@ async function handleLogout(e) {
 }
 
 /* -------------------------
-   Helpers and utilities
+   Utilities
    ------------------------- */
 function redirectToHome() {
   // If server indicates unauthenticated, send user to public site
@@ -171,7 +263,7 @@ function formatCurrency(value) {
 
 function statusClass(status) {
   if (!status) return '';
-  switch (status.toLowerCase()) {
+  switch (String(status).toLowerCase()) {
     case 'confirmed': return 'confirmed';
     case 'credited': return 'credited';
     case 'completed': return 'completed';
@@ -181,9 +273,6 @@ function statusClass(status) {
   }
 }
 
-/* -------------------------
-   UI action placeholders
-   ------------------------- */
 function openAction(action) {
   // Placeholder hooks for deposit/withdraw/profile actions.
   // In production these should open a secure modal or navigate to a server-rendered page.
@@ -199,5 +288,51 @@ function openAction(action) {
       break;
     default:
       console.warn('Unknown action', action);
+  }
+}
+
+/* -------------------------
+   Small helpers
+   ------------------------- */
+async function safeJson(response) {
+  try {
+    return await response.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+function escapeText(s) {
+  if (s === null || s === undefined) return '';
+  return String(s);
+}
+
+/* -------------------------
+   UI: Refresh button
+   ------------------------- */
+function createRefreshButton() {
+  try {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'refreshData';
+    btn.className = 'btn-secondary';
+    btn.style.marginLeft = '12px';
+    btn.textContent = 'Refresh';
+    btn.title = 'Refresh profile and transactions';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Refreshing…';
+      try {
+        await Promise.all([fetchAndRenderProfile(), fetchAndRenderTransactions()]);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Refresh';
+        btn.focus();
+      }
+    });
+    return btn;
+  } catch (err) {
+    console.error('Could not create refresh button', err);
+    return null;
   }
 }
