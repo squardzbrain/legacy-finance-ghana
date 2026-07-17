@@ -3,77 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <title>Legacy Finance Ghana</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="style.css">
-  <script src="script.js"></script>
+  <script defer src="script.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Ghanaians Future</h1>
-    <nav>
-      <a href="#">Dashboard</a>
-      <a href="#">Reports</a>
-      <a href="#">Education</a>
-      <a href="#">Support</a>
-      <a href="#" class="logout">Logout</a>
+  <header class="site-header">
+    <div class="brand">
+      <img src="assets/logo.png" alt="Legacy Finance Ghana logo" class="logo">
+      <div class="brand-text">
+        <h1>Ghanaians Future</h1>
+        <small class="tagline">Legacy Finance Ghana — Building Ghana’s Financial Future</small>
+      </div>
+    </div>
+
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="#" class="nav-link">Dashboard</a>
+      <a href="#" class="nav-link">Reports</a>
+      <a href="#" class="nav-link">Education</a>
+      <a href="#" class="nav-link">Support</a>
+      <button class="btn-logout" aria-label="Logout">Logout</button>
     </nav>
   </header>
 
-  <!-- Welcome Banner -->
-  <section class="welcome">
-    <h2>Welcome, Kwame Mensah</h2>
-    <p>Legacy Finance Ghana – Building Ghana’s Financial Future</p>
-  </section>
-
-  <main>
-    <!-- Summary Boxes -->
-    <section class="summary">
-      <div class="box balance">Current Balance: GHC 1200</div>
-      <div class="box deposited">Total Deposited: GHC 1000</div>
-      <div class="box returns">Returns Earned: GHC 200</div>
-      <div class="box next">Next Return Date: 31 July 2026</div>
+  <main class="container">
+    <section class="welcome" aria-labelledby="welcome-heading">
+      <h2 id="welcome-heading">Welcome, Kwame Mensah</h2>
+      <p class="lead">Your dashboard at a glance — track deposits, returns, and projected growth.</p>
     </section>
 
-    <!-- Transaction History -->
-    <section class="transactions">
-      <h2>Transaction History</h2>
-      <table>
-        <tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr>
-        <tr><td>01 Jul 2026</td><td>Deposit (MoMo)</td><td>500</td><td>Confirmed</td></tr>
-        <tr><td>31 Jul 2026</td><td>Return (4%)</td><td>40</td><td>Credited</td></tr>
-        <tr><td>05 Aug 2026</td><td>Withdrawal</td><td>200</td><td>Completed</td></tr>
-      </table>
+    <section class="summary-grid" aria-label="Financial summary">
+      <div class="card balance">
+        <div class="card-title">Current Balance</div>
+        <div class="card-value">GHC <span id="currentBalance">1200</span></div>
+      </div>
+
+      <div class="card deposited">
+        <div class="card-title">Total Deposited</div>
+        <div class="card-value">GHC <span id="totalDeposited">1000</span></div>
+      </div>
+
+      <div class="card returns">
+        <div class="card-title">Returns Earned</div>
+        <div class="card-value">GHC <span id="returnsEarned">200</span></div>
+      </div>
+
+      <div class="card next">
+        <div class="card-title">Next Return Date</div>
+        <div class="card-value"><span id="nextReturn">31 July 2026</span></div>
+      </div>
     </section>
 
-    <!-- Growth Calculator -->
-    <section class="calculator">
-      <h2>Calculate Your Future Savings</h2>
-      <form id="growthForm">
-        <label>Enter Amount (GHC):</label>
-        <input type="number" id="amount" value="1000">
+    <section class="transactions" aria-labelledby="transactions-heading">
+      <h3 id="transactions-heading">Transaction History</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Type</th><th>Amount (GHC)</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>01 Jul 2026</td><td>Deposit (MoMo)</td><td>500</td><td><span class="badge confirmed">Confirmed</span></td></tr>
+            <tr><td>31 Jul 2026</td><td>Return (4%)</td><td>40</td><td><span class="badge credited">Credited</span></td></tr>
+            <tr><td>05 Aug 2026</td><td>Withdrawal</td><td>200</td><td><span class="badge completed">Completed</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-        <label>Select Duration (Months):</label>
-        <select id="months">
+    <section class="calculator" aria-labelledby="calculator-heading">
+      <h3 id="calculator-heading">Calculate Your Future Savings</h3>
+      <form id="growthForm" class="calc-form" onsubmit="return false;">
+        <label for="amount">Enter Amount (GHC)</label>
+        <input id="amount" type="number" min="0" step="0.01" value="1000" required>
+
+        <label for="months">Select Duration (Months)</label>
+        <select id="months" required>
           <option value="6">6 Months</option>
           <option value="12">12 Months</option>
           <option value="24">24 Months</option>
         </select>
 
-        <button type="button" onclick="calculateGrowth()">Calculate</button>
+        <label for="rate">Select Monthly Rate</label>
+        <select id="rate" aria-label="Monthly interest rate">
+          <option value="0.04">4% monthly</option>
+          <option value="0.05">5% monthly</option>
+          <option value="0.06">6% monthly</option>
+        </select>
+
+        <div class="calc-actions">
+          <button id="calcBtn" class="btn-primary" type="button">Calculate</button>
+          <button id="resetBtn" class="btn-secondary" type="button">Reset</button>
+        </div>
+
+        <div id="result" class="calc-result" aria-live="polite">Projected Balance: GHC <span id="projected">—</span></div>
       </form>
-      <p id="result">Projected Balance: GHC …</p>
     </section>
 
-    <!-- Reports & Education -->
-    <section class="bottom-panels">
-      <div class="reports">
-        <h2>Latest Reports</h2>
+    <section class="bottom-panels" aria-label="Reports and education">
+      <div class="panel reports">
+        <h4>Latest Reports</h4>
         <ul>
           <li><a href="#">July 2026 Investment Report</a></li>
           <li><a href="#">Understanding Our Portfolio</a></li>
         </ul>
       </div>
-      <div class="education">
-        <h2>Financial Education</h2>
+
+      <div class="panel education">
+        <h4>Financial Education</h4>
         <ul>
           <li><a href="#">The Power of Compound Interest</a></li>
           <li><a href="#">Crypto Investing Basics</a></li>
@@ -81,5 +117,9 @@
       </div>
     </section>
   </main>
+
+  <footer class="site-footer">
+    <small>© Legacy Finance Ghana • Built for Ghanaians Future</small>
+  </footer>
 </body>
 </html>
