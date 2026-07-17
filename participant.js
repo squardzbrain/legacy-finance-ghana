@@ -1,1 +1,203 @@
+// participant.js
+// Production-ready client logic for the participant dashboard.
+// Assumes backend sets a secure HTTP-only session cookie after authentication.
+// Endpoints used:
+//  - GET  /api/profile         -> returns { name, phone, email, currentBalance, totalDeposited, returnsEarned }
+//  - GET  /api/transactions    -> returns [ { date, type, amount, status } ]
+//  - POST /api/logout          -> clears session
+// All requests use credentials: 'include' so cookies are sent/received by the browser.
 
+document.addEventListener('DOMContentLoaded', () => {
+  attachUiHandlers();
+  fetchAndRenderProfile();
+  fetchAndRenderTransactions();
+});
+
+function attachUiHandlers() {
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleLogout);
+  }
+
+  const depositBtn = document.getElementById('depositBtn');
+  if (depositBtn) depositBtn.addEventListener('click', (e) => { e.preventDefault(); openAction('deposit'); });
+
+  const withdrawBtn = document.getElementById('withdrawBtn');
+  if (withdrawBtn) withdrawBtn.addEventListener('click', (e) => { e.preventDefault(); openAction('withdraw'); });
+
+  const profileBtn = document.getElementById('profileBtn');
+  if (profileBtn) profileBtn.addEventListener('click', (e) => { e.preventDefault(); openAction('profile'); });
+}
+
+/* -------------------------
+   Fetch profile and render
+   ------------------------- */
+async function fetchAndRenderProfile() {
+  setProfileLoading(true);
+  try {
+    const resp = await fetch('/api/profile', { credentials: 'include', headers: { 'Accept': 'application/json' } });
+    if (resp.status === 401) return redirectToHome(); // not authenticated
+    if (!resp.ok) throw new Error(`Profile request failed (${resp.status})`);
+
+    const profile = await resp.json();
+    renderProfile(profile);
+  } catch (err) {
+    console.error('Error loading profile', err);
+    showProfileError('Unable to load profile. Please refresh or contact support.');
+  } finally {
+    setProfileLoading(false);
+  }
+}
+
+function renderProfile(profile) {
+  const heading = document.getElementById('profileHeading');
+  const lead = document.getElementById('profileLead');
+  if (heading) heading.textContent = `Welcome, ${profile.name || 'Participant'}`;
+  if (lead) {
+    const phone = profile.phone || '—';
+    const email = profile.email ? ` • ${profile.email}` : '';
+    lead.textContent = `Phone: ${phone}${email}`;
+  }
+
+  const pCurrent = document.getElementById('pCurrentBalance');
+  const pDeposited = document.getElementById('pTotalDeposited');
+  const pReturns = document.getElementById('pReturnsEarned');
+
+  if (pCurrent) pCurrent.textContent = formatCurrency(profile.currentBalance);
+  if (pDeposited) pDeposited.textContent = formatCurrency(profile.totalDeposited);
+  if (pReturns) pReturns.textContent = formatCurrency(profile.returnsEarned);
+}
+
+function setProfileLoading(isLoading) {
+  const lead = document.getElementById('profileLead');
+  if (!lead) return;
+  lead.style.opacity = isLoading ? '0.6' : '1';
+  if (isLoading) lead.textContent = 'Loading your account…';
+}
+
+/* -------------------------
+   Fetch transactions and render
+   ------------------------- */
+async function fetchAndRenderTransactions() {
+  const tbody = document.getElementById('txBody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#666;padding:12px;">Loading transactions…</td></tr>`;
+
+  try {
+    const resp = await fetch('/api/transactions', { credentials: 'include', headers: { 'Accept': 'application/json' } });
+    if (resp.status === 401) return redirectToHome();
+    if (!resp.ok) throw new Error(`Transactions request failed (${resp.status})`);
+
+    const txs = await resp.json();
+    renderTransactions(txs);
+  } catch (err) {
+    console.error('Error loading transactions', err);
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#b00020;padding:12px;">Error loading transactions.</td></tr>';
+  }
+}
+
+function renderTransactions(txs) {
+  const tbody = document.getElementById('txBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  if (!Array.isArray(txs) || txs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#666;padding:12px;">No transactions found.</td></tr>';
+    return;
+  }
+
+  txs.forEach(tx => {
+    const tr = document.createElement('tr');
+
+    const dateCell = document.createElement('td');
+    dateCell.textContent = formatDate(tx.date);
+    tr.appendChild(dateCell);
+
+    const typeCell = document.createElement('td');
+    typeCell.textContent = tx.type || '—';
+    tr.appendChild(typeCell);
+
+    const amountCell = document.createElement('td');
+    amountCell.textContent = formatCurrency(tx.amount);
+    tr.appendChild(amountCell);
+
+    const statusCell = document.createElement('td');
+    const span = document.createElement('span');
+    span.className = `badge ${statusClass(tx.status)}`;
+    span.textContent = tx.status || '—';
+    statusCell.appendChild(span);
+    tr.appendChild(statusCell);
+
+    tbody.appendChild(tr);
+  });
+}
+
+/* -------------------------
+   Logout
+   ------------------------- */
+async function handleLogout(e) {
+  e && e.preventDefault();
+  try {
+    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  } catch (err) {
+    console.error('Logout request failed', err);
+  } finally {
+    // Redirect to public home regardless of logout response
+    window.location.href = 'index.html';
+  }
+}
+
+/* -------------------------
+   Helpers and utilities
+   ------------------------- */
+function redirectToHome() {
+  // If server indicates unauthenticated, send user to public site
+  window.location.href = 'index.html';
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatCurrency(value) {
+  if (value === null || value === undefined) return '0.00';
+  const num = Number(value);
+  if (isNaN(num)) return '0.00';
+  return num.toFixed(2);
+}
+
+function statusClass(status) {
+  if (!status) return '';
+  switch (status.toLowerCase()) {
+    case 'confirmed': return 'confirmed';
+    case 'credited': return 'credited';
+    case 'completed': return 'completed';
+    case 'pending': return 'pending';
+    case 'failed': return 'failed';
+    default: return '';
+  }
+}
+
+/* -------------------------
+   UI action placeholders
+   ------------------------- */
+function openAction(action) {
+  // Placeholder hooks for deposit/withdraw/profile actions.
+  // In production these should open a secure modal or navigate to a server-rendered page.
+  switch (action) {
+    case 'deposit':
+      window.location.href = '/deposit.html';
+      break;
+    case 'withdraw':
+      window.location.href = '/withdraw.html';
+      break;
+    case 'profile':
+      window.location.href = '/account.html';
+      break;
+    default:
+      console.warn('Unknown action', action);
+  }
+}
