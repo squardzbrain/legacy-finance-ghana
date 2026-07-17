@@ -1,10 +1,12 @@
-// script.js
 document.addEventListener('DOMContentLoaded', () => {
   const calcBtn = document.getElementById('calcBtn');
   const resetBtn = document.getElementById('resetBtn');
 
   calcBtn.addEventListener('click', calculateGrowth);
   resetBtn.addEventListener('click', resetForm);
+
+  // Pre-calc example to match mockup: 1000 at 4% for 6 months => ~1264.86
+  document.getElementById('projected').textContent = '—';
 });
 
 function calculateGrowth() {
@@ -28,12 +30,10 @@ function calculateGrowth() {
     return;
   }
 
-  // Compound interest monthly
   const projected = amount * Math.pow(1 + rate, months);
-
   projectedEl.textContent = projected.toFixed(2);
 
-  // Optional: update summary values (demo only)
+  // Optional: update current balance preview (commented out)
   // document.getElementById('currentBalance').textContent = projected.toFixed(2);
 }
 
