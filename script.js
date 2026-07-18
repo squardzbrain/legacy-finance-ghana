@@ -11,6 +11,9 @@
 //  - Return JSON { success: false, error: "message" } on validation/auth failure
 //  - Respond to CORS preflight (OPTIONS) if frontend and API are on different origins
 
+// <-- Added API base for Vercel deployment -->
+const API_BASE = 'https://legacy-finance-ghana-2v188uv34-squardzbrain-industry.vercel.app';
+
 document.addEventListener('DOMContentLoaded', () => {
   // Calculator buttons
   const calcBtn = document.getElementById('calcBtn');
@@ -151,7 +154,7 @@ function initSignup() {
 
     // POST to server. Use credentials: 'include' so server can set HTTP-only cookies.
     try {
-      const resp = await fetch(signupForm.action || '/api/signup', {
+      const resp = await fetch(`${API_BASE}/api/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         credentials: 'include',
